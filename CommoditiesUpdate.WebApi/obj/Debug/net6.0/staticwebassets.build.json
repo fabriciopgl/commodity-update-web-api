@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "X1ER8TSlkWAgvTw7+Ve9HzrzlBBwdWVLBELqJsNhZHc=",
+  "Source": "Commodities.WebApi",
+  "BasePath": "_content/Commodities.WebApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
