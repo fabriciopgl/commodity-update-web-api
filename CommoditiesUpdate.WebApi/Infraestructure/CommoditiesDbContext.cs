@@ -1,4 +1,5 @@
-﻿using CommoditiesUpdate.WebApi.Domain;
+﻿using Commodities.WebApi.Domain.Models;
+using CommoditiesUpdate.WebApi.Domain;
 using CommoditiesUpdate.WebApi.Infraestructure.EntityConfigurations;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,11 +11,11 @@ namespace CommoditiesUpdate.WebApi.Infraestructure
         {
         }
 
-        public DbSet<Aluminium> Aluminium { get; set; }
+        public DbSet<Commodity> Commodities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfiguration(new AluminiumTypeConfiguration());
+            modelBuilder.ApplyConfiguration(new CommodityTypeConfiguration());
         }
     }
 }

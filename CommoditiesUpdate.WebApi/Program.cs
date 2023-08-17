@@ -1,23 +1,27 @@
-using CommoditiesUpdate.WebApi.Infraestructure;
-using CommoditiesUpdate.WebApi.Infraestructure.EntityConfigurations;
-using CommoditiesUpdate.WebApi.Infraestructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using CommoditiesUpdate.WebApi.Infraestructure;
+using Commodities.WebApi.Infraestructure.ExternalServices;
+using CommoditiesUpdate.WebApi.Infraestructure.Repositories;
+using CommoditiesUpdate.WebApi.Infraestructure.EntityConfigurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks();
 builder.Services.AddScoped<HttpClient>();
-builder.Services.AddScoped<IAluminiumRepository, AluminiumRepository>();
+builder.Services.AddScoped<IExternalServices, ExternalServices>();
+builder.Services.AddScoped<ICommodityRepository, CommodityRepository>();
 
-// DbContext de todos os commodities
+// DbContext from all commodities
 builder.Services.AddDbContext<CommoditiesDbContext>(
 o =>
 {
     o.UseSqlServer("name=ConnectionStrings:Commodities");
+
 });
 
-// Conversor de DateTime para DateOnly (quando busca do banco e serializa para Json)
+// DateTime to DateOnly  converter (when fetch data from database and serialize as Json)
 builder.Services.AddControllers()
 .AddJsonOptions(options =>
 {
@@ -27,11 +31,14 @@ builder.Services.AddControllers()
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-
 app.UseHttpsRedirection();
-
+app.UseRouting();
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHealthChecks("/health");
+});
 
 app.Run();

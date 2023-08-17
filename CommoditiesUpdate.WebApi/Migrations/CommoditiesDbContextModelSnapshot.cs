@@ -22,7 +22,7 @@ namespace CommoditiesUpdate.WebApi.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("CommoditiesUpdate.WebApi.Domain.Aluminium", b =>
+            modelBuilder.Entity("Commodities.WebApi.Domain.Models.Commodity", b =>
                 {
                     b.Property<int>("Code")
                         .HasColumnType("int");
@@ -30,9 +30,14 @@ namespace CommoditiesUpdate.WebApi.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal>("Price")
+                    b.Property<decimal>("Currency")
                         .HasPrecision(8, 2)
                         .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.HasKey("Code", "Date");
 

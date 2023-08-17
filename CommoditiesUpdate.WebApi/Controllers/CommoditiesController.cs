@@ -1,7 +1,8 @@
-using Newtonsoft.Json;
 using Microsoft.AspNetCore.Mvc;
-using CommoditiesUpdate.WebApi.Domain;
+using Commodities.WebApi.Helpers;
+using Commodities.WebApi.Domain.Factories;
 using CommoditiesUpdate.WebApi.Infraestructure.Repositories;
+using Commodities.WebApi.Infraestructure.ExternalServices;
 
 namespace CommoditiesUpdate.WebApi.Controllers
 {
@@ -9,43 +10,58 @@ namespace CommoditiesUpdate.WebApi.Controllers
     [Route("api/[controller]")]
     public class CommoditiesController : ControllerBase
     {
-        private readonly IAluminiumRepository _aluminiumRepository;
-        private readonly HttpClient _httpClient;
+        private readonly ICommodityRepository _commodityRepository;
+        private readonly IExternalServices _externalService;
 
-        public CommoditiesController(IAluminiumRepository aluminiumRepository, HttpClient httpClient)
+        public CommoditiesController(ICommodityRepository commodityRepository, IExternalServices externalService)
         {
-            _aluminiumRepository = aluminiumRepository;
-            _httpClient = httpClient;
+            _commodityRepository = commodityRepository;
+            _externalService = externalService;
         }
 
-        [HttpPost("update")]
-        public async Task<IActionResult> UpdateAsync()
+        [HttpPost("update/{code:int}")]
+        public async Task<IActionResult> UpdateAsync(int code)
         {
-            var response = await _httpClient.GetAsync("https://lme.gorilaxpress.com/cotacao/2cf4ff0e-8a30-48a5-8add-f4a1a63fee10/json/").Result.Content.ReadAsStringAsync();
-            if (response == null)
-                return BadRequest();
+            var responseBody = await _externalService.GetCommoditiesDataAsync();
+            if (responseBody.IsFailure)
+                return BadRequest(new AppError(Request.Path, "Error fetching external data", responseBody.Error));
 
-            var responseBody = JsonConvert.DeserializeObject<CommoditiesDTO>(response);
-            var commoditieDataToday = responseBody.Results.Find(f => f.Data == DateTime.Today.AddDays(-1));
-            if (commoditieDataToday == null)
-                return BadRequest();
+            var commodity = CommodityFactory.Create(responseBody.Value, code);
+            if(commodity.IsFailure)
+                return BadRequest(new AppError(Request.Path, "Error creating commodity", commodity.Error));
 
-            var aluminium = Aluminium.Create(1, DateOnly.FromDateTime(commoditieDataToday.Data), commoditieDataToday.Aluminio);
-            if (aluminium.IsFailure)
-                return BadRequest();
+            var oldCommodity = await _commodityRepository.GetByCodeAndDateAsync(code, commodity.Value.Date);
+            if (oldCommodity != null)
+            {
+                _commodityRepository.Remove(oldCommodity);
+                await _commodityRepository.CommitAsync();
+            }
 
-            await _aluminiumRepository.Add(aluminium.Value);
-            await _aluminiumRepository.CommitAsync();
+            await _commodityRepository.Add(commodity.Value);
+            await _commodityRepository.CommitAsync();
 
-            return Ok(aluminium.Value);
+            return Ok(commodity.Value);
         }
 
         [HttpGet]
         public async Task <IActionResult> GetAllCommodities()
         {
-            var aluminium = await _aluminiumRepository.GetAllAsync();
+            var aluminium = await _commodityRepository.GetAllAsync();
             if (!aluminium.Any())
-                return BadRequest();
+                return NotFound(new AppError(Request.Path, "No commodity data", "There is no data recorded in your database"));
+
+            return Ok(aluminium);
+        }
+
+        [HttpGet("{code:int}/{date}")]
+        public async Task<IActionResult> GetByCodeAndDateAsync(int code, string date)
+        {
+            if(!DateOnly.TryParse(date, out var parsedData))
+                return BadRequest(new AppError(Request.Path, "Invalid parameter", "The date parameter isn't valid"));
+
+            var aluminium = await _commodityRepository.GetByCodeAndDateAsync(code, parsedData);
+            if (aluminium == null)
+                return NotFound(new AppError(Request.Path, "No commodity data", "There is no data recorded in your database for date you've searched"));
 
             return Ok(aluminium);
         }
